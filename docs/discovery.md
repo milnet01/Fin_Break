@@ -66,10 +66,13 @@ Each is demonstrable by doing, not just by reading code.
 5. **Shareable locked PDF.** A user can export a PDF report, choosing which
    sections to include (summary / charts / transactions), that **opens only
    with a password** they set at export time.
-6. **Runs everywhere.** The same codebase produces a working **Windows**
-   executable, an **unsigned macOS** `.app` (in a `.dmg`), and a **Linux
-   AppImage**, plus a **Flatpak published on Flathub** — each launching to the
-   same dark-themed app.
+6. **Runs everywhere, fully self-contained.** The same codebase produces a
+   working **Windows** executable, an **unsigned macOS** `.app` (in a `.dmg`),
+   and a **Linux AppImage**, plus a **Flatpak published on Flathub** — each
+   launching to the same dark-themed app. Every artifact **bundles the Python
+   runtime and all dependencies**: the user downloads one file and runs it on a
+   clean machine with **nothing pre-installed** (no "install Python 3 first").
+   Verified each release on a clean machine with no Python.
 
 > **Locked-PDF handling:** when an imported statement PDF is itself
 > password-protected, the app prompts for the PDF's open-password, decrypts it

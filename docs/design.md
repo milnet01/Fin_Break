@@ -229,6 +229,21 @@ UI state.
 Parsing and import run on a worker thread (`QThread`) so the UI stays responsive
 on large statements; DB writes are serialised through the repository layer.
 
+### Packaging & self-contained delivery
+
+Every released artifact must run on a clean machine with **no prerequisites** —
+no system Python, no pip, no pre-installed native libraries. PyInstaller
+(Windows/macOS) and AppImage (Linux) bundle the CPython interpreter and every
+dependency into the artifact; the Flatpak ships against the Freedesktop runtime
+on Flathub. The build's real work is ensuring the **native** dependencies are
+collected, not just the Python ones — the SQLCipher library, the needed Qt
+plugins (platform, SQL driver, image formats), and the qpdf library behind
+`pikepdf` — because a missing native lib is the classic cause of a bundle that
+runs only on the build machine. AppImages are built on an **old base image** so
+the bundled glibc stays compatible with older target distros. The packaging
+spec's exit criterion is a launch on a clean VM/container with **no Python
+installed**. See ADR-0007.
+
 
 ## Architecture Decision Records
 
@@ -240,6 +255,7 @@ Non-obvious choices are recorded as ADRs in [docs/decisions/](decisions/):
 - **ADR-0004** — Qt-native PDF engine over WeasyPrint (cross-platform bundling).
 - **ADR-0005** — Generic per-bank CSV mapping profiles over hard-coded parsers.
 - **ADR-0006** — Transfer detection is suggest-then-confirm, never auto-applied.
+- **ADR-0007** — Self-contained bundled releases (no runtime prerequisites).
 
 Domain terms introduced here (transfer, mapping profile, draft, vault) are
 recorded in [docs/glossary.md](glossary.md).
