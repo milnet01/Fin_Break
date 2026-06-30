@@ -1,0 +1,30 @@
+; EditorConfig — https://editorconfig.org/
+; Sensible defaults for a fresh project. Override per language
+; once tech stack is set in P01.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+; Markdown trailing whitespace can be load-bearing (line break)
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+[*.{py,pyi}]
+indent_size = 4
+
+[*.{c,h,cpp,hpp,cc,hh}]
+indent_size = 4
+
+[*.{go,go.mod,go.sum}]
+indent_style = tab
+indent_size = 4

@@ -1,0 +1,59 @@
+# Common — language-agnostic baseline (P01 Bootstrap will add
+# language-specific ignores once the tech stack is chosen).
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.bak
+*.orig
+*.rej
+
+# Editor / IDE
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# Claude Code (local settings, history, allowlist — mostly personal).
+# Drop the trailing slash so the negations below can re-include
+# specific files; with `.claude/` git short-circuits at the
+# directory and ignores the !.claude/foo lines.
+.claude/*
+# Team-shared Claude Code config that SHOULD be in version control:
+!.claude/settings.json
+!.claude/workflow.md
+
+# Logs / runtime
+*.log
+*.pid
+*.sock
+
+# Coverage / sanitizers
+*.gcda
+*.gcno
+*.gcov
+coverage.*
+.coverage
+lcov.info
+
+# Core dumps
+core
+core.*
+*.core
+vgcore.*
+
+# Scratch
+scratch/
+tmp/
+Screenshot_*.png
+screenshot*.png

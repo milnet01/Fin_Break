@@ -1,0 +1,85 @@
+# Fin_Break — Workflow state
+
+## §1. Status header
+
+| Field | Value |
+|-------|-------|
+| **Project phase** | Phase A — Discovery (next) |
+| **Active item ID** | (none — discovery hasn't started) |
+| **Active step** | (see "Step progress" below) |
+| **Blocked on** | — |
+| **Last update** | 2026-06-30 (P00 scaffold) |
+| **Next gate** | User says "let's start discovery" |
+| **Convergence checkpoint** | 5 (consecutive `FP##` items immediately preceding any ✅-`implement`-Kind close in the active release block — see `~/.claude/commands/close-phase.md § 5a-6`) |
+| **Debt-sweep phase threshold** | 5 (auto-prompt for `/debt-sweep` after this many phases without one) |
+| **Last debt sweep** | (none yet) |
+| **Repo visibility** | (detect once via `gh repo view --json visibility -q .visibility` once a remote exists; cache for the session) |
+
+### Step progress
+
+While an item is active, Claude marks the current step 🚧;
+completed steps flip to ✅. Resets to all ⬜ when a new item
+becomes active.
+
+1. ⬜ Verify spec (research first if non-trivial)
+2. ⬜ Verify dependencies on the roadmap DAG
+3. ⬜ Write failing tests
+4. ⬜ Implement until tests pass
+5. ⬜ Run `/audit` (read `docs/audit-allowlist.md` first)
+6. ⬜ Run `/indie-review` (same allowlist read)
+7. ⬜ Fold actionable findings → new FP## roadmap item
+8. ⬜ Update CHANGELOG / ROADMAP / journal
+9. ⬜ Commit, tag `<ID>-complete`, ask user about push
+
+### Active item details
+
+(filled in once Phase A → P01 hands over an active item)
+
+```
+Item: <ID>
+Spec: docs/specs/<ID>.md
+Branch: main (no feature branch yet)
+Sub-findings:
+  - 📋 ...
+  - 📋 ...
+Tests: <count> passing, <count> failing
+```
+
+## §2. Workflow rules
+
+The canonical rules — phases A–D, the per-phase 9-step loop,
+ID scheme, triage table, fold-into-roadmap pattern,
+false-positive learning loop, drift handling, Definition of
+Done — live in
+`~/.claude/skills/app-workflow/SKILL.md`.
+Skills don't auto-load from filesystem presence — they fire
+on description-match against your message. To engage the
+workflow in a session, mention any of: phase / audit / drift
+/ fix-pass / "where were we" / "resume" / "continue work" /
+this `workflow.md` file by name. The project's `CLAUDE.md`
+(loaded automatically on session start) reminds you of this
+on every resume.
+
+**Hard rule kept inline (most-load-bearing):** never silently
+drift. If code being written diverges from the spec, stop and
+surface. Either the spec was wrong (update spec → re-audit
+affected sections → resume) or the code was wrong (fix code,
+no spec change). Never both papered-over.
+
+To refresh this file from the (upgraded) skill template, copy
+`~/.claude/skills/app-workflow/templates/.claude/workflow.md`
+over this file — preserve §1 (status header) and §3 (session
+journal); §2 is the only part that changes.
+
+## §3. Session journal
+
+Append-only. Newest at the top.
+
+### 2026-06-30 — P00 scaffold
+
+Project scaffolded from `~/.claude/skills/app-workflow/templates/`
+via `/start-app`. Initial commit `chore: scaffold project from
+template (P00)`.
+
+Next: Phase A — Discovery. User says "let's start discovery"
+in a fresh Claude Code session in this directory.
