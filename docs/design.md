@@ -1,9 +1,9 @@
 # Fin_Break — Design (Phase B)
 
-> **Status:** Template — filled during Phase B.
+> **Status:** Draft — awaiting user sign-off.
 > **Phase:** B — Design.
 > **Output:** architecture diagram, components, data flow,
-> ADRs in `docs/decisions/`.
+> cross-cutting concerns, ADRs in `docs/decisions/`.
 > **Gate:** user explicitly approves this document and the
 > ADRs before Phase C starts.
 > **Source of truth for:** *what is*. ADRs are *why we chose
@@ -12,100 +12,247 @@
 
 ## Architecture
 
+A layered desktop app. The UI never touches storage directly — everything goes
+through a service layer, which goes through repositories, which own the only
+handle to the encrypted database. This keeps each layer testable in isolation
+(services tested with an in-memory repo; importers tested with sample files).
+
 ```mermaid
-flowchart LR
-    User[User] --> UI[UI layer]
-    UI --> Logic[Business logic]
-    Logic --> Storage[(Storage)]
-    Logic --> Output[Output]
+flowchart TB
+    User([User]) --> UI
+
+    subgraph UI["UI layer (PySide6, dark theme)"]
+        Unlock[Unlock / first-run setup]
+        Dash[Dashboard: summary + pie/donut + trends]
+        TxTable[Transaction table + filters]
+        ImportWiz[Import wizard]
+        Rules[Rules manager]
+        Accounts[Accounts manager]
+        Settings[Settings]
+        Export[PDF export dialog]
+    end
+
+    UI --> Svc
+
+    subgraph Svc["Service layer (business logic)"]
+        Auth[AuthService<br/>master pw → key, lock/unlock, auto-lock]
+        Import[ImportService<br/>orchestrate + dedup]
+        Cat[CategorizationService<br/>rules engine]
+        Transfer[TransferDetectionService<br/>suggest + confirm]
+        Report[ReportingService<br/>aggregations]
+        PdfOut[PdfExportService<br/>render + encrypt]
+    end
+
+    subgraph Importers["Importers (pluggable)"]
+        Manual[Manual entry]
+        Csv[CSV + mapping profile]
+        Ofx[OFX]
+        PdfIn[PDF + in-memory decrypt]
+    end
+
+    Import --> Importers
+    Svc --> Repo
+
+    subgraph Repo["Repository layer"]
+        AccRepo[Accounts]
+        TxRepo[Transactions]
+        CatRepo[Categories tree]
+        RuleRepo[Rules]
+        ProfRepo[Import profiles]
+        SetRepo[Settings + secrets]
+    end
+
+    Repo --> DB[(SQLCipher DB<br/>AES-256, per-OS-user)]
+
+    Crypto[CryptoService<br/>Argon2id KDF, pikepdf] -.-> Auth
+    Crypto -.-> PdfIn
+    Crypto -.-> PdfOut
 ```
 
-> *Replace the placeholder with the actual architecture.
-> Mermaid renders in both Ants Terminal and GitHub.*
 
 ## Components
 
-> *One bullet per box in the diagram. One-line summary, plus
-> a "main responsibility" sentence. Every box has exactly
-> one main responsibility — if a component has two, split
-> it.*
+One main responsibility per box.
 
-- **UI layer** — (filled during Phase B). Main responsibility:
-  presenting state to the user and capturing input.
-- **Business logic** — (filled during Phase B). Main
-  responsibility: turning user input into state changes.
-- **Storage** — (filled during Phase B). Main responsibility:
-  persisting state across sessions.
-- **Output** — (filled during Phase B). Main responsibility:
-  formatting state for delivery (file, network, screen).
+**UI layer (PySide6)** — presents state and captures input; holds no business
+logic. Notable screens:
+
+- **Unlock / first-run** — prompts for the master password; on first run, sets
+  it and the base currency. Main responsibility: gate access to the data.
+- **Dashboard** — income-vs-expenditure summary, category pie/donut, and
+  month-to-month trends, for a chosen period and account (or all accounts).
+- **Transaction table** — searchable, filterable list; the screen where a user
+  re-categorises a transaction or confirms a transfer.
+- **Import wizard** — pick file(s) → choose/define a mapping profile (CSV) →
+  preview → confirm; prompts for a PDF password when needed.
+- **Rules manager** — view/add/edit auto-categorisation rules.
+- **Accounts manager** — add/edit accounts and their type (current, savings,
+  credit card, loan, home loan, investment, other).
+- **Settings** — base currency, auto-lock timeout, stored PDF passwords, backup
+  export, theme.
+- **PDF export dialog** — tick sections (summary / charts / transactions), pick
+  period, set the export password.
+
+**Service layer** — the business logic; one service per concern:
+
+- **AuthService** — turns the master password into the DB key (via
+  CryptoService), unlocks/locks the database, runs the inactivity auto-lock.
+  Main responsibility: control access to decrypted data.
+- **ImportService** — orchestrates an import: select importer by file type →
+  normalise rows to transaction drafts → **de-duplicate** against existing →
+  persist → trigger categorisation and transfer detection. Main
+  responsibility: get external data in, exactly once.
+- **CategorizationService** — applies the rule set to assign categories;
+  records manual overrides as the highest-priority signal. Main
+  responsibility: classify each transaction.
+- **TransferDetectionService** — finds debit/credit pairs across the user's own
+  accounts and proposes them as transfers for the user to confirm. Main
+  responsibility: identify internal money movement so it can be excluded.
+- **ReportingService** — aggregates transactions by category, account, and
+  period into the numbers the dashboard and PDF need. Main responsibility:
+  turn rows into breakdowns.
+- **PdfExportService** — renders the chosen sections to PDF (Qt engine), then
+  encrypts with a password (pikepdf). Main responsibility: produce the locked
+  shareable report.
+- **CryptoService** — Argon2id key derivation, secret handling, and pikepdf
+  encrypt/decrypt. Main responsibility: own all cryptographic operations in one
+  auditable place.
+
+**Importers (pluggable)** — `ManualEntry`, `CsvImporter` (+ mapping profile),
+`OfxImporter`, `PdfImporter` (decrypts in memory first). Each exposes the same
+interface: `parse(source) -> list[TransactionDraft]`. Adding a new format =
+adding one importer; nothing else changes.
+
+**Repository layer** — the only code that touches SQL. One repository per
+aggregate (Accounts, Transactions, Categories, Rules, Import profiles, Settings
+& secrets). Main responsibility: persistence, nothing else.
+
+**Storage** — a single SQLCipher database file in the per-OS-user data
+directory (resolved via `QStandardPaths.AppDataLocation`). AES-256, whole-file
+encrypted.
+
 
 ## Data flow
 
-> *Describe the dominant path through the system, plus any
-> feedback loops (how user input causes UI updates). Don't
-> list every code path; describe the canonical one and any
-> notable side-paths.*
+**Dominant path — import to insight:**
 
-(filled during Phase B)
+1. User unlocks → AuthService derives the key → repositories open the DB.
+2. User runs the import wizard and picks a statement file for an account.
+3. ImportService selects the importer (by extension/content); a PDF that's
+   locked is decrypted in memory first (prompting for / reusing its password).
+4. The importer returns normalised drafts (date, amount, description, sign).
+5. ImportService **de-duplicates** drafts against existing transactions (match
+   on account + date + amount + normalised description, hashed) → only genuinely
+   new rows are persisted.
+6. CategorizationService auto-tags the new rows via the rule set.
+7. TransferDetectionService scans for cross-account debit/credit matches and
+   raises **suggestions**.
+8. The UI shows new transactions and any transfer suggestions; the user
+   confirms transfers and corrects categories (manual overrides win).
+9. ReportingService recomputes; the Dashboard re-renders (charts, summary,
+   trends).
+
+**Export path:** user opens the export dialog → picks period + sections + a
+password → PdfExportService renders via the Qt PDF engine → CryptoService/pikepdf
+encrypts → a password-locked PDF is written to a user-chosen location.
+
+**Feedback loop:** any edit (manual category, confirmed/rejected transfer, new
+rule) writes through a repository and emits a Qt signal; subscribed views
+(dashboard, table) refresh. State changes flow one way: UI → service → repo →
+signal → UI.
+
 
 ## Cross-cutting concerns
 
-> *Things that touch multiple components. Each gets a one-
-> paragraph treatment so they don't get lost in
-> per-component design.*
+### Security (the load-bearing concern — this is personal financial data)
+
+- **Encryption at rest.** The entire database is SQLCipher (AES-256). The file
+  is meaningless without the key.
+- **Key derivation.** The master password is stretched with **Argon2id**
+  (memory-hard) into the DB key. The password and derived key are never
+  persisted; the key lives in memory only while unlocked and is cleared on lock.
+- **No network, ever.** The app opens no sockets, bundles no networking client,
+  and makes no outbound calls. (Dependabot/CI run in GitHub's infrastructure,
+  not in the shipped app.)
+- **Per-OS-user isolation.** Data lives in the current OS user's app-data
+  directory; different logins are naturally separate, each behind its own master
+  password.
+- **Secrets in the vault.** Optional stored PDF passwords live *inside* the
+  encrypted DB — never in plaintext, never outside the vault.
+- **Input PDFs decrypted in memory only.** A locked statement is never written
+  decrypted to disk.
+- **Auto-lock.** After a configurable idle period the key is dropped and the UI
+  returns to the unlock screen.
+- **No recovery backdoor.** A forgotten master password means unrecoverable
+  data (by design). Mitigation: an explicit **encrypted backup export** the user
+  can store safely.
 
 ### Error handling
 
-(filled during Phase B — typical questions: do errors propagate
-to the UI? Are they logged? Do we have a global handler? Is
-there a retry policy?)
+Errors surface to the user; nothing is silently swallowed (per coding
+standards). Import parse errors are shown per-row in the wizard preview *before*
+anything is written — the user sees "12 of 240 rows couldn't be parsed" and can
+proceed with the good rows or fix the mapping. Storage/crypto failures raise a
+clear dialog (e.g. "wrong password"). A wrong PDF password re-prompts rather
+than aborting the whole import.
 
 ### Observability
 
-(filled during Phase B — what's logged, what's metricised,
-what's tracked, who reads them)
+A local **rotating log file** in the user data directory (no telemetry, no
+network). Logs record operations and errors but **never** transaction contents
+or secrets. The log path is shown in Settings so a user can find it for
+support.
 
 ### State management
 
-(filled during Phase B — single store / per-component / per-
-session / persisted; what triggers state changes; how state
-flows between components)
+One unlocked DB connection per session, owned by the repository layer. Views are
+stateless renderers subscribed to repository signals. There is no global mutable
+store beyond the DB; "current period" and "current account filter" are view-local
+UI state.
 
 ### Persistence
 
-(filled during Phase B if Storage is non-trivial — schema,
-migrations, atomic-write strategy, backup policy)
+- **Location:** `QStandardPaths.AppDataLocation` → `~/.local/share/FinBreak/`
+  (Linux), `%APPDATA%\FinBreak\` (Windows), `~/Library/Application Support/FinBreak/`
+  (macOS).
+- **Schema & migrations:** a `schema_version` table; migrations run on unlock,
+  forward-only, each in a transaction.
+- **Atomicity:** every import/edit is a single DB transaction — a failed import
+  leaves no partial rows.
+- **Tables (high-level):** `accounts`, `transactions`, `categories` (self-
+  referential tree, `parent_id`), `rules`, `transfer_links`, `import_profiles`,
+  `secrets`, `settings`, `schema_version`. Exact columns are fixed in each
+  item's spec.
+
+### Concurrency
+
+Parsing and import run on a worker thread (`QThread`) so the UI stays responsive
+on large statements; DB writes are serialised through the repository layer.
+
 
 ## Architecture Decision Records
 
-ADRs for non-obvious choices live in
-[docs/decisions/](decisions/) — one file per decision,
-sequential numbering, never edited after acceptance.
+Non-obvious choices are recorded as ADRs in [docs/decisions/](decisions/):
 
-Phase B should produce at least one ADR per non-obvious
-choice. If a choice was obvious (e.g. "we picked the standard
-library for collections"), no ADR. If a contributor six
-months from now might propose an alternative, ADR.
+- **ADR-0001** — Record architecture decisions (template).
+- **ADR-0002** — PySide6 over PyQt6 (LGPL vs GPL for public distribution).
+- **ADR-0003** — SQLCipher + Argon2id, local-only, per-OS-user (security model).
+- **ADR-0004** — Qt-native PDF engine over WeasyPrint (cross-platform bundling).
+- **ADR-0005** — Generic per-bank CSV mapping profiles over hard-coded parsers.
+- **ADR-0006** — Transfer detection is suggest-then-confirm, never auto-applied.
 
-Recommended starting set:
-
-- ADR-0001: Record architecture decisions (already in template).
-- ADR-0002: Choose <chosen-language> over <runner-up> for the
-  business logic.
-- ADR-0003: Choose <storage-mechanism> over <alternatives>.
+Domain terms introduced here (transfer, mapping profile, draft, vault) are
+recorded in [docs/glossary.md](glossary.md).
 
 
 ## Sign-off
 
 - [ ] Architecture diagram drafted (mermaid renders cleanly).
-- [ ] Component list captures every box, with main
-  responsibility per box.
+- [ ] Component list captures every box, with main responsibility per box.
 - [ ] Data flow described.
-- [ ] Cross-cutting concerns each have a one-paragraph
-  treatment.
+- [ ] Cross-cutting concerns each have a one-paragraph treatment.
 - [ ] At least one ADR per non-obvious choice written.
-- [ ] **User has approved this document and the ADRs.**
-  Date: ____.
+- [ ] **User has approved this document and the ADRs.** Date: ____.
 
 Once approved, proceed to Phase C — write the four
 `docs/standards/*.md` files, populate `ROADMAP.md`, and write
