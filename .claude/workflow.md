@@ -4,16 +4,16 @@
 
 | Field | Value |
 |-------|-------|
-| **Project phase** | Phase A — Discovery (next) |
-| **Active item ID** | (none — discovery hasn't started) |
+| **Project phase** | Phase B — Design (next) |
+| **Active item ID** | (none — pre-code phases) |
 | **Active step** | (see "Step progress" below) |
 | **Blocked on** | — |
-| **Last update** | 2026-06-30 (P00 scaffold) |
-| **Next gate** | User says "let's start discovery" |
+| **Last update** | 2026-06-30 (Phase A discovery approved) |
+| **Next gate** | User approves `docs/design.md` + ADRs |
 | **Convergence checkpoint** | 5 (consecutive `FP##` items immediately preceding any ✅-`implement`-Kind close in the active release block — see `~/.claude/commands/close-phase.md § 5a-6`) |
 | **Debt-sweep phase threshold** | 5 (auto-prompt for `/debt-sweep` after this many phases without one) |
 | **Last debt sweep** | (none yet) |
-| **Repo visibility** | (detect once via `gh repo view --json visibility -q .visibility` once a remote exists; cache for the session) |
+| **Repo visibility** | PUBLIC (cached 2026-06-30; push freely per global rule § 6) |
 
 ### Step progress
 
@@ -74,6 +74,21 @@ journal); §2 is the only part that changes.
 ## §3. Session journal
 
 Append-only. Newest at the top.
+
+### 2026-06-30 — Phase A discovery approved
+
+`docs/discovery.md` written from the brainstorming conversation and approved by
+the user. Public repo created + pushed (`milnet01/Fin_Break`); layout declared
+in `.ants/project.json`; public-GitHub optionals activated.
+
+Key decisions: PySide6 (LGPL) GUI; SQLCipher encrypted-at-rest storage; Qt-native
+PDF engine (WeasyPrint dropped for cross-platform bundling); local-only/no-network;
+per-OS-user data. Cross-platform delivery: Windows `.exe`, unsigned macOS
+`.app`/`.dmg`, Linux AppImage + Flathub Flatpak, driven by a specced
+`scripts/publish-release.sh`. Local CI emulation (`scripts/ci-local.sh`) +
+`.github/workflows/ci.yml` are P01 deliverables.
+
+Next: Phase B — Design (`docs/design.md` + ADRs).
 
 ### 2026-06-30 — P00 scaffold
 
