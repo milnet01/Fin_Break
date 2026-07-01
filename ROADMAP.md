@@ -377,6 +377,35 @@ because retrofitting them is a data migration.
   without the key anyway). Target phase: P02. Dependencies: FIBR-0004.
   Lanes: crypto, ux. Kind: feature. Source: user-request-2026-07-01.
 
+- 📋 [FIBR-0031] **Failed-unlock throttling (exponential backoff).**
+  Slow down brute-force guessing of the master password: after each wrong
+  attempt on the unlock screen, impose a growing delay (e.g. 1s → 2s → 4s
+  …, capped) before the next try is accepted. A one-off typo is barely
+  noticeable; bulk guessing becomes infeasible. Pure client-side timing —
+  no lockout that could deny the legitimate owner access, and no counter
+  that weakens the crypto. Record the backoff schedule in security-model.md
+  at spec time. Target phase: P04 (lands with the unlock flow).
+  Dependencies: FIBR-0004. Lanes: security, ux. Kind: security.
+  Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0032] **Clipboard auto-clear for copied sensitive values.**
+  When the user copies a sensitive value (account number, amount, a stored
+  PDF password), clear it from the system clipboard after a short timeout
+  (~30s, configurable in the FIBR-0014 Settings screen) so it doesn't
+  linger for other apps to read. Only clear if the clipboard still holds
+  the value we put there (don't wipe something the user copied since).
+  Target phase: P12. Dependencies: FIBR-0012, FIBR-0014. Lanes: ui,
+  security. Kind: security. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0033] **Backup restore-verification ("does my backup work?").**
+  A one-click check that opens an encrypted backup (FIBR-0018) into a
+  throwaway in-memory / temp copy, confirms it decrypts and its schema +
+  row counts are intact, then discards it — proving the backup is
+  genuinely restorable **without** touching the live vault. A backup never
+  test-restored is a guess, not a safety net. Target phase: P12.
+  Dependencies: FIBR-0018. Lanes: crypto, ux. Kind: feature.
+  Source: user-request-2026-07-01.
+
 ### 🎨 Features & accessibility
 
 - 📋 [FIBR-0021] **Multi-currency decision (ADR).** Decide single- vs
@@ -423,6 +452,34 @@ because retrofitting them is a data migration.
   (FIBR-0017) and theming (FIBR-0023) work. Target phase: P12.
   Dependencies: FIBR-0014. Lanes: ui, accessibility. Kind: accessibility.
   Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0034] **Import preview + undo (rollback a whole import batch).**
+  Before an import lands, show a preview — "about to add 214 transactions
+  from 3 May–2 Jun across 1 account" — so a wrong file can be cancelled
+  before it touches the ledger. Each committed import is tagged as a batch
+  so it can be undone in one action if it was the wrong statement.
+  Preserves manual category overrides on re-import per FIBR-0010's rule.
+  Target phase: P06 (lands with the first import UI). Dependencies:
+  FIBR-0007. Lanes: services, ui, repo, tests. Kind: feature.
+  Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0035] **Auto-categorisation that learns from corrections.**
+  Extends the FIBR-0010 rules engine: when the user manually re-files a
+  transaction (e.g. "TESCO" → Groceries), offer to create or update a rule
+  so similar future transactions self-categorise — the tedious part gets
+  quieter the more the app is used. Always a **suggestion** the user
+  confirms (never a silent auto-rule), and a manual override still wins
+  over any learned rule (FIBR-0010's invariant). Target phase: P08
+  (extends the rules engine). Dependencies: FIBR-0010. Lanes: services,
+  ui, tests. Kind: feature. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0036] **Net-worth-over-time trend.** A dashboard line showing
+  the running total across all accounts month to month — is the overall
+  picture trending up or down — distinct from FIBR-0012's
+  income-vs-expenditure bars (this is the cumulative balance, not per-month
+  flow). Draws its series colour from the active theme (FIBR-0023) like the
+  other charts. Target phase: P10. Dependencies: FIBR-0012. Lanes:
+  reporting, ui, tests. Kind: feature. Source: user-request-2026-07-01.
 
 ### ⚡ Performance
 
