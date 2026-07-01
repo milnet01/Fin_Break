@@ -316,6 +316,114 @@ lands on top.
 
 ---
 
+## Enhancements & performance backlog
+
+Ideas captured 2026-07-01 from a product / performance review
+(user-requested). Not yet slotted into the P0x phase order — each
+carries a **Target phase** and `Dependencies:`; it is promoted into that
+phase when its dependencies land. Two are **foundational** (marked
+*Sequencing*) and must be designed at the noted phase, not deferred,
+because retrofitting them is a data migration.
+
+### 🔒 Security & account recovery
+
+- 📋 [FIBR-0018] **Encrypted vault backup & restore.**
+  Export the whole vault to a single encrypted backup file the user
+  keeps off-device (external drive / cloud), and restore from it — the
+  mitigation design.md names for the no-recovery-backdoor rule, so a disk
+  failure or lost laptop doesn't mean lost data. Target phase: P12 (its
+  heading already lists "backup"). Dependencies: FIBR-0004. Lanes:
+  crypto, ux. Kind: feature. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0019] **Master-password recovery via recovery key
+  (key-wrapping).** At vault creation, generate a high-entropy recovery
+  code the user stores safely; wrap the vault data-key under **both** the
+  master password and the recovery code (envelope encryption) so a
+  forgotten password is recoverable via the code with **no** backdoor.
+  *Sequencing:* foundational — the key envelope must exist at FIBR-0004
+  (vault creation); retrofitting needs a full re-encrypt migration.
+  Requires an ADR + a security-model.md update at spec time. Target
+  phase: P02. Dependencies: FIBR-0004. Lanes: crypto, security.
+  Kind: security. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0020] **Biometric unlock (fingerprint / face) with capability
+  detection.** Store a key-wrapped copy of the vault key in the OS secure
+  keystore, released by the platform biometric (Windows Hello, macOS
+  Touch ID, Linux fprintd where present). **Detect** availability per-OS
+  and offer it only when present; always keep the password as fallback. A
+  convenience unlock, **not** a recovery method — Linux biometric support
+  is uneven, so degrade gracefully. Target phase: P12. Dependencies:
+  FIBR-0004, FIBR-0019 (shares the key-wrapping envelope). Lanes: crypto,
+  platform, ux. Kind: feature. Source: user-request-2026-07-01.
+
+### 🎨 Features & accessibility
+
+- 📋 [FIBR-0021] **Multi-currency decision (ADR).** Decide single- vs
+  multi-currency for v1 **before** accounts are built. If multi: a
+  currency column on accounts/transactions, QLocale-formatted display,
+  and a rule that the dashboard never sums across currencies without
+  conversion. *Sequencing:* decide before FIBR-0005 (accounts) — adding a
+  currency column afterwards is a schema migration. Target phase: P03
+  (the decision precedes it). Dependencies: none. Lanes: data.
+  Kind: investigate. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0022] **Budgets + recurring / subscription detection.**
+  Per-category monthly spending limits with progress + over-budget
+  signalling on the dashboard, plus automatic detection of repeating
+  charges (same payee / amount cadence) so subscriptions surface. Target
+  phase: P10. Dependencies: FIBR-0006 (category tree), FIBR-0010 (rules).
+  Lanes: reporting, ux. Kind: feature. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0023] **Theming: light / dark + colourblind-safe palettes +
+  picker.** Beyond the default dark theme (ADR-0002), add a light theme
+  and colourblind-safe palettes, selectable from the FIBR-0014 Settings
+  screen (beside the FIBR-0017 language picker); dashboard charts
+  (FIBR-0012) draw series colours from the active palette so colourblind
+  users get distinguishable series. Target phase: P12. Dependencies:
+  FIBR-0012, FIBR-0014. Lanes: ui, accessibility. Kind: ux.
+  Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0024] **Accessibility: keyboard navigation + screen-reader
+  support.** Full keyboard control (focus order, shortcuts, no mouse-only
+  actions) and screen-reader labels/roles via Qt accessibility
+  (`QAccessible`) on widgets and charts. Pairs with the i18n/RTL
+  (FIBR-0017) and theming (FIBR-0023) work. Target phase: P12.
+  Dependencies: FIBR-0014. Lanes: ui, accessibility. Kind: accessibility.
+  Source: user-request-2026-07-01.
+
+### ⚡ Performance
+
+- 📋 [FIBR-0025] **Enable SQLite WAL mode.** Set
+  `PRAGMA journal_mode=WAL` on the SQLCipher DB for better write
+  throughput and UI responsiveness during import. *Sequencing:* set at DB
+  creation (FIBR-0004). WAL adds `-wal` / `-shm` sidecars (already
+  ignored by FIBR-0002; SQLCipher encrypts them too). Target phase: P02.
+  Dependencies: FIBR-0004. Lanes: persistence, perf. Kind: perf.
+  Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0026] **Index the import de-duplication lookup.** Add a DB
+  index on `(account_id, date, amount)` (and/or a normalised-description
+  hash column) so import dedup (design.md data-flow step 5) is an indexed
+  lookup, not an O(n·m) scan of existing rows for every imported row.
+  Target phase: P05. Dependencies: FIBR-0007. Lanes: data, perf.
+  Kind: perf. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0027] **SQL-side dashboard aggregation + incremental refresh.**
+  Compute dashboard summaries / charts with SQL `GROUP BY` rather than
+  Python loops, and refresh incrementally on a single-row edit instead of
+  a full recompute; add supporting indexes (`date`, `category_id`). Keeps
+  the dashboard fast at tens of thousands of transactions. Target phase:
+  P10. Dependencies: FIBR-0012. Lanes: reporting, perf. Kind: perf.
+  Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0028] **Virtual table model for the transaction list.** Back
+  the transaction table with a `QAbstractTableModel` (lazy / virtual
+  rows) rather than per-row widgets, so a large history scrolls smoothly.
+  Target phase: P10. Dependencies: FIBR-0012. Lanes: ui, perf.
+  Kind: perf. Source: user-request-2026-07-01.
+
+---
+
 ## How to add an item
 
 1. Allocate the next ID:
