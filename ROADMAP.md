@@ -80,7 +80,7 @@ scariest unknown (native-library bundling) up front.
 
 ### 📦 Packaging
 
-- 📋 [FIBR-0003] **P01: bundling smoke-test (de-risk
+- ✅ [FIBR-0003] **P01: bundling smoke-test (de-risk
   native libs early).** Freeze the trivial placeholder app into
   a one-file **AppImage** *and* a PyInstaller bundle, then launch
   each on a clean target with **no Python installed**, confirming
@@ -91,6 +91,7 @@ scariest unknown (native-library bundling) up front.
   after ten phases are built on top. Full multi-platform
   packaging + publish pipeline is deferred to P13. Dependencies:
   FIBR-0001. Lanes: build, ci. Kind: chore. Source: planned.
+  Resolved 2026-07-01: closed by /close-phase. `--self-test` loads all three native stacks; `build-smoke.sh` freezes a PyInstaller onefile + AppImage in a `python:3.12-slim-bookworm` container (glibc floor ~2.36; wheels' own floor 2.34) and both print `FINBREAK_SELFTEST_OK` in the Python-free `debian:13-slim` clean-room — ADR-0007's clean-machine criterion proven at P01. The de-risk empirically caught 5 real portability traps (host-glibc mismatch, static manylinux Python, missing Qt system libs, missing harfbuzz, missing libGL). Toolchain pinned (INV-4); opt-in build stage + weekly CI job keep the everyday gate fast. Impl commit 49e87b6; /audit + /indie-review zero actionable on the close pass (3 doc/comment drifts fixed inline). Tag FIBR-0003-complete.
 
 ---
 

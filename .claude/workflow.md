@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Project phase** | P01 — Bootstrap |
-| **Active item ID** | FIBR-0003 |
+| **Project phase** | P02 — Vertical slice: the security spine |
+| **Active item ID** | FIBR-0004 |
 | **Active step** | (see "Step progress" below) |
 | **Blocked on** | — |
-| **Last update** | 2026-07-01 (FIBR-0003 spec drafted + /cold-eyes converged over 6 loops; steps 1–2 done; now step 3 — write failing tests) |
-| **Next gate** | FIBR-0003 step 3 (write failing tests: self-test loads Qt+SQLCipher+qpdf) |
+| **Last update** | 2026-07-01 (FIBR-0003 closed by /close-phase — clean pair on the close round, 3 doc drifts fixed inline; tag FIBR-0003-complete; P01 Bootstrap complete) |
+| **Next gate** | FIBR-0004 step 1 (verify/expand the spec: master password → Argon2id → SQLCipher vault → one transaction → lock) |
 | **Convergence checkpoint** | 5 (consecutive `FP##` items immediately preceding any ✅-`implement`-Kind close in the active release block — see `~/.claude/commands/close-phase.md § 5a-6`) |
 | **Debt-sweep phase threshold** | 5 (auto-prompt for `/debt-sweep` after this many phases without one) |
 | **Last debt sweep** | (none yet) |
@@ -21,9 +21,9 @@ While an item is active, Claude marks the current step 🚧;
 completed steps flip to ✅. Resets to all ⬜ when a new item
 becomes active.
 
-1. ✅ Verify spec (read `docs/audit-allowlist.md` first)
-2. ✅ Verify dependencies on the roadmap DAG
-3. 🚧 Write failing tests
+1. ⬜ Verify spec (read `docs/audit-allowlist.md` first)
+2. ⬜ Verify dependencies on the roadmap DAG
+3. ⬜ Write failing tests
 4. ⬜ Implement until tests pass
 5. ⬜ Run `/audit` (read `docs/audit-allowlist.md` first)
 6. ⬜ Run `/indie-review` (same allowlist read)
@@ -36,12 +36,16 @@ becomes active.
 (filled in once Phase A → P01 hands over an active item)
 
 ```
-Item: FIBR-0003 (P01 Bootstrap — bundling smoke-test, de-risk native libs)
-Spec: docs/specs/FIBR-0003.md (not yet written — Step 1 drafts it)
-Depends: FIBR-0001 (✅ closed 2026-07-01), FIBR-0002 (✅ closed 2026-07-01)
-Branch: main (doc/chore work lands directly on main)
-Next: Step 1 — verify/expand the FIBR-0003 spec, then TDD loop
-Tests: (harness green; 24 passing, 0 failing)
+Item: FIBR-0004 (P02 Vertical slice — master password → Argon2id → SQLCipher
+      vault → one manual transaction → table → lock)
+Spec: docs/specs/FIBR-0004.md (not yet written — Step 1 drafts it)
+Depends: FIBR-0001 (✅ closed 2026-07-01). Phase-ordering also puts FIBR-0002
+         (✅) and FIBR-0003 (✅) ahead, but they are not code prerequisites.
+Branch: implement-Kind item — PR-based flow may apply (see global rule § 7);
+        confirm branch at Step 1.
+Next: Step 1 — write/expand the FIBR-0004 spec (security spine; cite
+      security-model.md INV-2 Argon2id params), /cold-eyes it, then TDD loop
+Tests: (harness green; 27 passing, 1 skipped after FIBR-0003 close)
 ```
 
 ## §2. Workflow rules
@@ -73,6 +77,34 @@ journal); §2 is the only part that changes.
 ## §3. Session journal
 
 Append-only. Newest at the top.
+
+### 2026-07-01 — FIBR-0003 closed by /close-phase (P01 Bootstrap complete)
+
+Steps 3–4 (TDD + implement) landed in commit `49e87b6`; the bundling
+smoke-test is proven green (both the onefile and AppImage print
+`FINBREAK_SELFTEST_OK` in the Python-free `debian:13-slim` clean-room).
+
+**Close (steps 5–9):** ran `/audit` + `/indie-review` in parallel over the
+FIBR-0003-authored files. Audit (incl. `shellcheck` on all three shell
+scripts): zero actionable. Indie-review: 3 actionable, **all doc/comment
+drift, no code/security defect** — a stale "manylinux_2_34 container"
+mislabel (the build image is `python:3.12-slim-bookworm`; manylinux is ruled
+out because it ships a static Python) in `pyproject.toml` + `build-smoke.sh`,
+a stale test-function name in `tests/features/bundling/spec.md`, and a
+missing `pip install .` in CLAUDE.md's dev-setup. User authorised the
+**fix-inline** path (deviation from the rigid FP## route, per the skill's
+"deviations require explicit user instruction"). Fixed all three, then a
+**cold re-audit + re-review pair** caught one straggler instance of the same
+manylinux mislabel (`CLAUDE.md:143`, module map) the first review missed —
+fixed, exhaustively `grep`-verified across the tree, then a final confirming
+cold review returned **CLEAN, zero actionable**. Clean pair on the same
+closing round → DoD #5 met.
+
+Updated CHANGELOG (Added), flipped ROADMAP FIBR-0003 → ✅ with resolution
+note, wrote `docs/journal/FIBR-0003.md`. Tag `FIBR-0003-complete`.
+
+**P01 Bootstrap is now complete** (FIBR-0001/0002/0003 all ✅). Next: P02
+FIBR-0004 — the encrypted security spine (the deliberate vertical slice).
 
 ### 2026-07-01 — FIBR-0003 spec drafted + /cold-eyes (6 loops)
 

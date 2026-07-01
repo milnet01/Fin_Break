@@ -25,7 +25,7 @@ Exercises the three entry-point modes of `python -m finbreak` (INV-1 table):
 
 ## Build + clean-room (integration — `integration` marker, opt-in)
 
-`test_build_clean_room` runs `scripts/build-smoke.sh` and asserts exit 0
+`test_INV2_INV3_build_smoke_clean_room` runs `scripts/build-smoke.sh` and asserts exit 0
 (both artifacts print `FINBREAK_SELFTEST_OK` in the Python-free container,
 INV-2/INV-3). It **skips** unless ALL hold, so the everyday gate never blocks
 on a multi-minute build (INV-5/INV-6):

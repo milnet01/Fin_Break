@@ -32,6 +32,19 @@ signaling per
   group), the `.gitleaks.toml` scan config, and a placeholder `finbreak`
   package with a smoke test. (FIBR-0001)
 
+- **Bundling smoke-test — proves the native stacks travel into a
+  Python-free download.** A permanent `python -m finbreak --self-test`
+  diagnostic loads all three native stacks (Qt via PySide6, the SQLCipher
+  encrypted DB, and qpdf behind pikepdf) and prints a sentinel;
+  `scripts/build-smoke.sh` freezes it into a PyInstaller onefile **and** an
+  AppImage inside a `python:3.12-slim-bookworm` container (glibc floor
+  ~2.36) and launches each in a Python-free `debian:13-slim` clean-room,
+  proving ADR-0007's clean-machine exit criterion in miniature. Adds the
+  first pinned runtime deps (`PySide6`, `sqlcipher3-binary`, `pikepdf`) and
+  a `build` group (`pyinstaller`); the slow build is opt-in
+  (`ci-local.sh --build`) with a dedicated weekly CI job, so the everyday
+  gate stays fast. (FIBR-0003)
+
 ### Security
 
 - **`.gitignore` blocks financial data and build output from the public repo.** (FIBR-0002)

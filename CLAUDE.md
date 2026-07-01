@@ -59,13 +59,15 @@ binary, not a pip package — install from your distro or the
 [gitleaks releases](https://github.com/gitleaks/gitleaks/releases)).
 
 **One-time dev setup** — isolated env + the pinned dev toolchain (ruff,
-bandit, pip-audit, pytest, pytest-qt):
+bandit, pip-audit, pytest, pytest-qt) **and the runtime deps** (PySide6,
+SQLCipher, pikepdf), which the FIBR-0003 self-test guard imports:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip      # PEP 735 --group needs pip >= 25.1
 python -m pip install --group dev
+python -m pip install .                  # runtime deps — the self-test test loads them
 ```
 
 **Run the full gate** — the same stages CI runs (lint, format-check, bandit,
@@ -138,8 +140,8 @@ header.
 - `scripts/ci-local.sh` — the one-command quality + security gate (`--build`
   adds the FIBR-0003 bundling smoke-test).
 - `scripts/build-smoke.sh` (+ `_build-smoke-in-container.sh`) — freeze the stub
-  in a `manylinux_2_34` container and launch it in a Python-free `debian:13-slim`
-  container (FIBR-0003).
+  in a `python:3.12-slim-bookworm` container (glibc ~2.36) and launch it in a
+  Python-free `debian:13-slim` container (FIBR-0003).
 - `.github/workflows/ci.yml` — CI mirror; installs the dev group + runtime deps
   + gitleaks, then invokes the gate script (single source of truth, INV-2).
 - `.github/workflows/build-smoke.yml` — the dedicated, opt-in build job

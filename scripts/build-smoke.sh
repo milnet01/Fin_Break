@@ -4,8 +4,9 @@
 # portable Linux artifact and run with NO Python installed.
 #
 # Builds a PyInstaller --onefile AND an AppImage of `python -m finbreak
-# --self-test` inside a manylinux_2_34 container (so the glibc floor is bounded
-# to the container's, not the bleeding-edge build host), then launches each
+# --self-test` inside a python:3.12-slim-bookworm container (glibc ~2.36, so the
+# floor is bounded to the container's, not the bleeding-edge build host), then
+# launches each
 # inside a Python-free debian:13-slim container with a scrubbed, offline
 # environment and asserts FINBREAK_SELFTEST_OK. Exits 0 only if BOTH pass.
 #
@@ -37,7 +38,7 @@ echo "== build-smoke: runner=$RUNNER =="
 
 mkdir -p "$DIST" "$CACHE"
 
-# --- 1) build both artifacts inside the manylinux_2_34 container ------------
+# --- 1) build both artifacts inside the python:3.12-slim-bookworm container -
 # The build phase needs network (pip + appimagetool fetch); only the run phase
 # (step 2) is offline.
 echo "== build-smoke: freezing in $BUILD_IMAGE (this takes a few minutes) =="
