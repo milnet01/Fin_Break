@@ -146,6 +146,44 @@ below cover the two surfaces; there is no C++ in the codebase.
   use a `QThread` worker, per design.md "Concurrency".
 - Restrictive permissions (`0o600`) on any file that holds config or
   secrets (see §7).
+- **Translatable UI strings:** every user-facing string goes through
+  `self.tr(...)` (or `QCoreApplication.translate("Context", ...)` outside
+  a `QObject`) — never a bare display literal. PySide6's `tr()` returns a
+  plain `str` (there is no `QString.arg()`), so substitute values with
+  Python formatting on **named** placeholders so translators can reorder
+  them — `self.tr("Imported {done} of {total}").format(done=done,
+  total=total)` — and for counts needing plural forms use Qt's numerus
+  argument: `self.tr("Imported %n row(s)", "", count)`. Don't build display
+  strings with `+` or bare f-strings, and don't wrap non-display strings
+  (log lines, DB keys, enum values). Pass **string literals** to `tr()` /
+  `translate()` — `lupdate` extracts only literal arguments, so a string built
+  in a variable or helper produces an empty catalog entry. This holds from the
+  first UI (P02) — it makes the FIBR-0017 (P12) i18n pass a translate-and-ship
+  step instead of a rewrite.
+- **Live language switching:** widgets re-translate on `QEvent.LanguageChange`
+  (override `changeEvent` to call a `retranslateUi()` that regenerates labels) —
+  Qt does **not** re-translate already-built widgets when the translator
+  changes. Build this in from P02, or a mid-session switch only takes effect on
+  the next launch.
+- **RTL-safe layout:** build every screen to mirror for right-to-left
+  locales (Arabic) with no per-widget rework. Arrange widgets with Qt
+  layout managers (`QHBoxLayout`, `QFormLayout`, `QGridLayout`), never
+  fixed x/y positions — layouts mirror automatically from the app's
+  `layoutDirection`. Drive direction from the active locale
+  (`QApplication.setLayoutDirection(QLocale().textDirection())`); don't pin
+  `setLayoutDirection(Qt.LayoutDirection.LeftToRight)` on individual widgets.
+  Leave text at its direction-aware default rather than forcing
+  `Qt.AlignmentFlag.AlignLeft` / `Qt.AlignmentFlag.AlignRight`, and mirror
+  direction-implying icons (back / forward arrows) yourself — supply an RTL
+  variant or pick per `layoutDirection`; Qt mirrors layouts, not custom icon
+  art.
+- **Locale-aware formatting:** render numbers, currency, and dates via
+  `QLocale` (`QLocale().toString(value, 'f', 2)` — `'f'` = fixed-point, 2
+  decimals), never a hand-rolled `f"{x:,.2f}"` for display. `QLocale` controls the *format* (separators,
+  grouping), not the currency: pass the base currency's symbol explicitly —
+  `QLocale().toCurrencyString(value, symbol)` — so a fixed base currency isn't
+  reformatted to the locale's own. See [design.md "Internationalization (i18n) &
+  localisation"](../design.md#internationalization-i18n--localisation).
 
 
 ## 6. Performance

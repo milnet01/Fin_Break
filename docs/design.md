@@ -245,6 +245,52 @@ UI state.
 Parsing and import run on a worker thread (`QThread`) so the UI stays responsive
 on large statements; DB writes are serialised through the repository layer.
 
+### Internationalization (i18n) & localisation
+
+The UI is built **translation-ready and layout-mirror-ready from the first
+screen (P02)**, not retrofitted. Wrapping strings and keeping layouts
+direction-agnostic while a screen is written costs almost nothing; retrofitting
+i18n and right-to-left (RTL) support across a feature-complete UI is a
+whole-codebase rewrite. So, as a standing convention:
+
+- **Every user-facing string goes through Qt's translation system** —
+  `tr()` / `QCoreApplication.translate()`. No display literal is hardcoded, and
+  strings are never assembled by `+` / f-string concatenation (word order
+  varies by language); values are substituted through placeholders after
+  translation instead. The exact PySide6 idioms live in coding.md § 5.2.
+- **Layouts are direction-agnostic so the whole UI mirrors for RTL locales.**
+  Screens are arranged with Qt layout managers rather than fixed positions, so
+  they flip automatically with the application's `layoutDirection`, and text
+  keeps its direction-aware default instead of forced left/right alignment.
+  Direction-implying icons (back / forward arrows) are the one thing Qt won't
+  flip on its own, so they are mirrored explicitly (the concrete rule is in
+  coding.md § 5.2). This works **only** when the UI avoids hardcoded left/right
+  absolutes — hence the from-P02 discipline:
+  building it this way once means only the first RTL locale added (Arabic) needs
+  layout QA, and further RTL scripts (Hebrew, Urdu) are then translation-only.
+- **Numbers, currency, and dates are formatted through `QLocale`**, never
+  hand-rolled format strings. This is not cosmetic for a finance app: decimal
+  and thousands separators and date conventions differ per locale, so figures
+  read naturally in every locale while still showing the user's chosen base
+  currency.
+- **Translations load at runtime** via `QTranslator` (compiled `.qm`
+  catalogs), switchable at runtime from the language picker FIBR-0017 adds to
+  the FIBR-0014 Settings screen — no reinstall; selecting an RTL locale flips
+  the layout direction app-wide. Live switching relies on the per-widget
+  re-translation coding.md § 5.2 requires (it is not automatic); otherwise a
+  change applies on next launch.
+- **Non-display** strings — log messages, DB keys, enum values — are *not*
+  translated; only what the user reads on screen.
+
+Shipping the catalogs themselves is the **FIBR-0017** (P12) deliverable — the
+initial set is English (base), Spanish, Simplified Chinese, Hindi, French, and
+**Arabic**; the packaging step below bundles the `.qm`
+files as app resources. The coding-level rules are in
+[coding.md § 5.2](standards/coding.md#52-pyside6-qt-for-python); the extraction
+and compile pipeline (`lupdate` → `.ts` → `lrelease` → `.qm`) and per-locale
+plural / placeholder handling are pinned in the FIBR-0017 spec at
+implementation time.
+
 ### Packaging & self-contained delivery
 
 Every released artifact must run on a clean machine with **no prerequisites** —
@@ -255,7 +301,9 @@ on Flathub. The build's real work is ensuring the **native** dependencies are
 collected, not just the Python ones — the SQLCipher library, the needed Qt
 plugins (platform, SQL driver, image formats), and the qpdf library behind
 `pikepdf` — because a missing native lib is the classic cause of a bundle that
-runs only on the build machine. AppImages are built on an **old base image** so
+runs only on the build machine. The compiled `.qm` translation catalogs
+(FIBR-0017) are bundled as app data resources so every locale works offline.
+AppImages are built on an **old base image** so
 the bundled glibc stays compatible with older target distros. The packaging
 spec's exit criterion is a launch on a clean VM/container with **no Python
 installed**. See ADR-0007.
