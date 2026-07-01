@@ -397,11 +397,21 @@ because retrofitting them is a data migration.
 
 - 📋 [FIBR-0023] **Theming: separate theme sets for normal and
   colourblind vision + picker.** Ship **two families** of themes — a set
-  for normal colour vision (light + dark) **and** a set designed for
-  colourblind users (protanopia / deuteranopia / tritanopia-friendly
-  palettes) — selectable from the FIBR-0014 Settings screen (beside the
-  FIBR-0017 language picker). Dashboard charts (FIBR-0012) draw series
-  colours from the active theme, so whichever theme is chosen keeps the
+  for normal colour vision **and** a set designed for colourblind users
+  (protanopia / deuteranopia / tritanopia-friendly palettes) — selectable
+  from the FIBR-0014 Settings screen (beside the FIBR-0017 language
+  picker). The normal-vision family goes beyond plain light/dark: ship a
+  small curated set of named themes — at minimum **Light**, **Dark**,
+  **Midnight** (near-black OLED-friendly), **Solarized Light**,
+  **Solarized Dark**, **Sepia** (warm, low-eyestrain), and a
+  **High-contrast** pairing — plus a **"follow the OS"** option that
+  tracks the system light/dark setting. Each theme is a named palette
+  (window / surface / text / accent / chart-series roles), defined in one
+  place so adding a theme is data, not code — no per-widget hardcoded
+  colours (coding.md § 8 bars magic constants without a named source; a
+  QSS stylesheet + palette tokens keeps colours in one table). Dashboard
+  charts (FIBR-0012) draw series colours from the
+  active theme's chart-series role, so whichever theme is chosen keeps the
   chart series distinguishable. Target phase: P12. Dependencies:
   FIBR-0012, FIBR-0014. Lanes: ui, accessibility. Kind: ux.
   Source: user-request-2026-07-01.
