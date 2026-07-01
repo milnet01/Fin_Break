@@ -356,6 +356,27 @@ because retrofitting them is a data migration.
   FIBR-0004, FIBR-0019 (shares the key-wrapping envelope). Lanes: crypto,
   platform, ux. Kind: feature. Source: user-request-2026-07-01.
 
+- 📋 [FIBR-0029] **Password reminder / hint (shown before unlock).**
+  An optional user-set hint on the unlock screen to jog memory —
+  enforced to **not be the password** (and not to contain it). *Security
+  note:* the hint must render **before** the vault is decrypted, so it
+  lives **outside** the encrypted DB and is readable by anyone with
+  device access — warn the user, keep it short, and record the new
+  plaintext artefact in security-model.md at spec time. A memory aid, not
+  a recovery method. Target phase: P02. Dependencies: FIBR-0004. Lanes:
+  crypto, ux. Kind: feature. Source: user-request-2026-07-01.
+
+- 📋 [FIBR-0030] **"Forgotten password → start over" (destructive vault
+  reset, double-confirmed).** Last resort on the unlock screen once the
+  hint (FIBR-0029) and recovery key (FIBR-0019) are exhausted:
+  irreversibly delete the vault and its sidecars and return to first-run
+  setup so the user can begin fresh. **Double confirmation required** — a
+  clear "this erases everything, permanently and unrecoverably" warning
+  **and** a second explicit step (e.g. type DELETE) before anything is
+  removed. By design nothing survives (the old data can't be decrypted
+  without the key anyway). Target phase: P02. Dependencies: FIBR-0004.
+  Lanes: crypto, ux. Kind: feature. Source: user-request-2026-07-01.
+
 ### 🎨 Features & accessibility
 
 - 📋 [FIBR-0021] **Multi-currency decision (ADR).** Decide single- vs
@@ -374,12 +395,14 @@ because retrofitting them is a data migration.
   phase: P10. Dependencies: FIBR-0006 (category tree), FIBR-0010 (rules).
   Lanes: reporting, ux. Kind: feature. Source: user-request-2026-07-01.
 
-- 📋 [FIBR-0023] **Theming: light / dark + colourblind-safe palettes +
-  picker.** Beyond the default dark theme (ADR-0002), add a light theme
-  and colourblind-safe palettes, selectable from the FIBR-0014 Settings
-  screen (beside the FIBR-0017 language picker); dashboard charts
-  (FIBR-0012) draw series colours from the active palette so colourblind
-  users get distinguishable series. Target phase: P12. Dependencies:
+- 📋 [FIBR-0023] **Theming: separate theme sets for normal and
+  colourblind vision + picker.** Ship **two families** of themes — a set
+  for normal colour vision (light + dark) **and** a set designed for
+  colourblind users (protanopia / deuteranopia / tritanopia-friendly
+  palettes) — selectable from the FIBR-0014 Settings screen (beside the
+  FIBR-0017 language picker). Dashboard charts (FIBR-0012) draw series
+  colours from the active theme, so whichever theme is chosen keeps the
+  chart series distinguishable. Target phase: P12. Dependencies:
   FIBR-0012, FIBR-0014. Lanes: ui, accessibility. Kind: ux.
   Source: user-request-2026-07-01.
 
