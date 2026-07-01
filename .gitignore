@@ -1,5 +1,12 @@
-# Common — language-agnostic baseline (P01 Bootstrap will add
-# language-specific ignores once the tech stack is chosen).
+# Common — language-agnostic baseline. Python dev-artefact ignores are
+# in the "Python" section below; FIBR-0002 expands that into the full set
+# (local vaults, *.db, packaging output: *.dmg / AppImage / dist).
+
+# Python — bytecode caches and the local dev virtualenv (.venv is also
+# allowlisted in .gitleaks.toml and excluded by bandit).
+__pycache__/
+*.py[cod]
+.venv/
 
 # OS
 .DS_Store
