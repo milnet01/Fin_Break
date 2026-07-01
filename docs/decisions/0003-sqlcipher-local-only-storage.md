@@ -31,9 +31,11 @@ Alternatives considered:
 
 Store all data in a single **SQLCipher** database (AES-256, whole-file) per OS
 user, in `QStandardPaths.AppDataLocation`. Derive the database key from the
-user's **master password via Argon2id**. Never persist the password or key; hold
-the key in memory only while unlocked and clear it on lock/auto-lock. The app
-makes **no network connections**.
+user's **master password via Argon2id**. The Argon2id output is passed as
+SQLCipher's **raw** key (the `x'…'` raw-key pragma), so **Argon2id — not
+SQLCipher's built-in PBKDF2 — is the key-derivation function**. Never persist
+the password or key; hold the key in memory only while unlocked and clear it on
+lock/auto-lock. The app makes **no network connections**.
 
 ## Consequences
 

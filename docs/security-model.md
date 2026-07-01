@@ -119,7 +119,7 @@ be checkable. Enforcement arrives in step with the code:
   two lengths are finbreak's own choices (OWASP pins only memory /
   time / parallelism). The parameters and salt are recorded with
   the vault. On open the app derives the key from the parameters
-  **recorded in the vault** and **must refuse to proceed** unless
+  **recorded with the vault** and **must refuse to proceed** unless
   the record passes two checks — a directional **strength floor**
   on memory and an **exact-format** match on the lengths. The
   strength floor: recorded **memory ≥ 47104 KiB** (a vault with

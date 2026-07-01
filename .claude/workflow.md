@@ -21,8 +21,9 @@ While an item is active, Claude marks the current step 🚧;
 completed steps flip to ✅. Resets to all ⬜ when a new item
 becomes active.
 
-1. ⬜ Verify spec (read `docs/audit-allowlist.md` first)
-2. ⬜ Verify dependencies on the roadmap DAG
+1. ✅ Verify spec (`docs/specs/FIBR-0004.md`; `/cold-eyes` 6 loops;
+   user signed off 2026-07-01, ZAR added, 2 cross-doc fixes applied)
+2. 🚧 Verify dependencies on the roadmap DAG (FIBR-0001 ✅ — next)
 3. ⬜ Write failing tests
 4. ⬜ Implement until tests pass
 5. ⬜ Run `/audit` (read `docs/audit-allowlist.md` first)
@@ -77,6 +78,35 @@ journal); §2 is the only part that changes.
 ## §3. Session journal
 
 Append-only. Newest at the top.
+
+### 2026-07-01 — FIBR-0004 spec drafted + `/cold-eyes` (6 loops)
+
+Opened P02. Confirmed no PR-workflow opt-in (no marker/CODEOWNERS, all
+direct `<ID>:` commits) → FIBR-0004 lands directly on `main`. Researched +
+pinned the crypto-stack idioms (argon2-cffi 25.1.0 `hash_secret_raw` raw-key
+API; sqlcipher3-binary 0.6.0 raw-key pragma + HMAC-SHA512 defaults + wrong-key
+`DatabaseError`; `bytearray` wipe limits) before drafting, so the contract
+cites real APIs (global rule §13). Drafted `docs/specs/FIBR-0004.md` — the
+security-spine vertical slice (CryptoService→AuthService→Vault→one repo→3 UI
+screens; 8 INVs mapping to security-model INV-1/2/3/8/9).
+
+**Cold-eyes (global rule §14):** 2 lanes (accuracy; implementability), **6
+loops**, 12 independent cold reviewers, ~75 verified findings fixed, **zero
+CRITICAL** throughout, no regression survived past one loop. Notable catches:
+the coding.md §7 gaps (`0o600` perms, atomic sidecar write, key-wipe-on-exit
+leg of INV-3) at loop 3; the loop caught **3 defects I introduced while
+fixing loop 4** (loop 5) and **2 more from loop-5 edits** (loop 6, the
+"confirming pass" the user authorised at the max-loops cap) — including a
+fabricated FIBR-0003 quote and an INV-2c `len(key)` over-reach. Design
+defaults baked in + flagged for sign-off: money as exact integer minor units
+(reject sub-unit, never round); plaintext KDF sidecar; auto-lock 10 min
+placeholder; tamper-and-wrong-password deliberately indistinguishable at
+unlock. Two cross-doc follow-ups surfaced for the user: a one-line ADR-0003
+raw-key note, and tightening security-model INV-2's "in the vault" → "with
+the vault".
+
+Next: **user signs off the spec**, then Step 2 (deps: FIBR-0001 ✅) → Step 3
+(write failing tests) → Step 4 (implement).
 
 ### 2026-07-01 — FIBR-0003 closed by /close-phase (P01 Bootstrap complete)
 
