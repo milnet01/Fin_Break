@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Runs INSIDE the build container (invoked by scripts/build-smoke.sh). Freezes
+# `python -m finbreak --self-test` to a PyInstaller --onefile and wraps that same
+# binary in an AppImage. The image is python:3.12-slim-bookworm: it ships a
+# SHARED libpython (PyInstaller needs one — manylinux's is static) and an
+# older-than-host glibc (~2.36), which bounds the artifact's floor below the
+# debian:13-slim test target (FIBR-0003 INV-2/INV-4).
+#
+# Reads ONEFILE / APPIMAGE from the environment; writes both artifacts to /out
+# (a host bind-mount). /src is the read-only project root; /cache persists the
+# fetched appimagetool between runs.
+set -euo pipefail
+
+VENV=/tmp/benv
+APPDIR=/tmp/AppDir
+
+echo "-- installing build prerequisites + Qt runtime libs --"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+# Two groups:
+#  - build tools: binutils (objdump/objcopy for PyInstaller + appimagetool),
+#    file (appimagetool needs it), ca-certificates (HTTPS appimagetool fetch).
+#  - Qt's system-library dependencies: PySide6 bundles Qt itself but Qt links
+#    these OS libs. They must be PRESENT here so PyInstaller's dependency
+#    analysis collects them INTO the bundle (ADR-0007 "collect native libs");
+#    otherwise the artifact fails on a bare target. apt pulls their transitive
+#    deps (libpng, libbrotlicommon, …) too, which PyInstaller then also bundles.
+apt-get install -y -qq --no-install-recommends \
+    binutils file ca-certificates \
+    libglib2.0-0 libgl1 libegl1 libdbus-1-3 libx11-6 libxkbcommon0 \
+    libfreetype6 libfontconfig1 libbrotli1 libharfbuzz0b >/dev/null
+
+echo "-- provisioning PySide6-only build venv --"
+# Persist pip's download cache in /cache (a host bind-mount) so re-runs reuse
+# the ~250 MB PySide6 wheel instead of re-fetching it every build.
+export PIP_CACHE_DIR=/cache/pip
+python3 -m venv "$VENV"
+# shellcheck disable=SC1091
+. "$VENV/bin/activate"
+python -m pip install --quiet --upgrade pip
+python -m pip install --quiet \
+    PySide6==6.11.1 sqlcipher3-binary==0.6.0 pikepdf==10.9.1 pyinstaller==6.21.0
+
+# INV-2: exactly one Qt binding must be present before freezing (PyInstaller
+# 6.x refuses to collect more than one).
+qt_count="$(python -m pip list --format=freeze \
+    | grep -icE '^(PySide2|PySide6|PyQt5|PyQt6)==' || true)"
+if [ "$qt_count" != "1" ]; then
+    echo "build-smoke: expected exactly one Qt binding, found $qt_count" >&2
+    exit 1
+fi
+
+echo "-- freezing --onefile --"
+pyinstaller --onefile --name "$ONEFILE" \
+    --paths /src/src \
+    --hidden-import sqlcipher3 \
+    --hidden-import pikepdf \
+    --hidden-import PySide6.QtWidgets \
+    --collect-binaries pikepdf \
+    --collect-binaries sqlcipher3 \
+    --distpath /out --workpath /tmp/build --specpath /tmp \
+    /src/src/finbreak/__main__.py
+
+echo "-- fetching appimagetool --"
+TOOL=/cache/appimagetool-x86_64.AppImage
+if [ ! -x "$TOOL" ]; then
+    python -c 'import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])' \
+        "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+        "$TOOL"
+    chmod +x "$TOOL"
+fi
+
+echo "-- assembling AppDir --"
+rm -rf "$APPDIR"
+mkdir -p "$APPDIR/usr/bin"
+cp "/out/$ONEFILE" "$APPDIR/usr/bin/$ONEFILE"
+cat > "$APPDIR/AppRun" <<EOF
+#!/bin/sh
+HERE="\$(dirname "\$(readlink -f "\$0")")"
+exec "\$HERE/usr/bin/$ONEFILE" "\$@"
+EOF
+chmod +x "$APPDIR/AppRun"
+cat > "$APPDIR/$ONEFILE.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=finbreak-selftest
+Exec=$ONEFILE
+Icon=$ONEFILE
+Categories=Utility;
+Terminal=true
+EOF
+# appimagetool requires an icon; Pillow is present (a pikepdf dependency).
+python -c "from PIL import Image; Image.new('RGBA', (64, 64), (30, 120, 80, 255)).save('$APPDIR/$ONEFILE.png')"
+
+echo "-- building AppImage --"
+# Containers lack /dev/fuse, so extract-and-run instead of mounting; skip the
+# optional AppStream metadata check (no metainfo in this smoke stub).
+ARCH=x86_64 "$TOOL" --appimage-extract-and-run --no-appstream "$APPDIR" "/out/$APPIMAGE"
+
+echo "-- in-container build done --"

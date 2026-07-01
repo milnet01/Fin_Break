@@ -1,17 +1,19 @@
-name: CI
+name: build-smoke
 
+# FIBR-0003 — the opt-in bundling smoke-test. NOT run on every push (that would
+# make the fast gate slow); it runs on demand and weekly, freezing the stub into
+# a PyInstaller onefile + AppImage and launching each in a Python-free container.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1" # weekly, Monday 04:00 UTC
 
 permissions:
   contents: read
 
 jobs:
-  gate:
-    name: lint + security + tests
+  build-smoke:
+    name: freeze + clean-room launch
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -21,15 +23,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      # PEP 735 `--group` needs pip >= 25.1; the runner's bundled pip may be older.
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
       - name: Install dev dependency group
         run: python -m pip install --group dev
 
-      # Runtime deps (PySide6, sqlcipher3-binary, pikepdf) are needed by the
-      # fast bundling self-test guard (FIBR-0003 INV-6), which runs in the gate.
       - name: Install project runtime dependencies
         run: python -m pip install .
 
@@ -40,7 +39,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      # Single source of truth: CI runs the exact same stages as a local
-      # checkout by invoking the script, not by re-listing them (INV-2).
-      - name: Run the gate
-        run: ./scripts/ci-local.sh
+      # Runs the full gate PLUS the build+clean-room integration test. The
+      # runner's Docker is used (no podman); build-smoke.sh falls back to it.
+      - name: Run the gate with the build smoke-test
+        run: ./scripts/ci-local.sh --build

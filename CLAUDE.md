@@ -84,8 +84,21 @@ pytest tests/test_smoke.py::test_package_imports    # by node id
 ```
 
 The gate runs `pytest -m "not perf"` (perf excluded; integration tests run).
-`pytest-qt`'s plugin is disabled via `pyproject.toml` `addopts` until PySide6
-lands at P02 — remove that line when the first GUI test is added.
+`pytest-qt`'s plugin is disabled via `pyproject.toml` `addopts` — PySide6 now
+lands at P01 (FIBR-0003), but the bundling test uses no `qtbot`, so the plugin
+stays off until the first real GUI test (P02) removes that line.
+
+**Bundling smoke-test** (FIBR-0003) — prove the native stacks (Qt, SQLCipher,
+qpdf) travel into a Python-free bundle:
+
+```bash
+python -m finbreak --self-test        # in-process: loads all three, prints a sentinel
+./scripts/build-smoke.sh              # freeze onefile + AppImage, launch each in a container
+./scripts/ci-local.sh --build         # the gate PLUS the build+clean-room test (opt-in)
+```
+
+The slow build+clean-room test is **off by default** (keeps the gate fast); pass
+`--build` or set `FINBREAK_BUILD_SMOKE=1`. It needs `podman`/`docker` on `PATH`.
 
 ## Commit conventions
 
@@ -113,18 +126,26 @@ header.
 `src` layout; the package is `finbreak`, found by pytest via
 `pythonpath = ["src"]` (no editable install needed for the gate).
 
-- `src/finbreak/` — the application package. Currently a placeholder
-  (`__init__.py` with `__version__`); UI / services / repositories / crypto
-  modules land from P02 (see [`docs/design.md`](docs/design.md) for the
-  layered architecture).
+- `src/finbreak/` — the application package. `__init__.py` (`__version__`),
+  plus `__main__.py` + `_selftest.py` — the `python -m finbreak --self-test`
+  entry point that loads Qt + SQLCipher + qpdf (FIBR-0003). UI / services /
+  repositories / crypto modules land from P02 (see
+  [`docs/design.md`](docs/design.md) for the layered architecture).
 - `tests/` — pytest suite. `tests/test_smoke.py` asserts the package imports;
   `tests/features/<name>/` (spec.md + test) and `tests/fixtures/<rule>/` arrive
   with the features they cover
   ([`docs/standards/testing.md`](docs/standards/testing.md)).
-- `scripts/ci-local.sh` — the one-command quality + security gate.
-- `.github/workflows/ci.yml` — CI mirror; installs the dev group + gitleaks,
-  then invokes the gate script (single source of truth, INV-2).
-- `pyproject.toml` — metadata, pinned `dev` group, ruff / pytest / bandit config.
+- `scripts/ci-local.sh` — the one-command quality + security gate (`--build`
+  adds the FIBR-0003 bundling smoke-test).
+- `scripts/build-smoke.sh` (+ `_build-smoke-in-container.sh`) — freeze the stub
+  in a `manylinux_2_34` container and launch it in a Python-free `debian:13-slim`
+  container (FIBR-0003).
+- `.github/workflows/ci.yml` — CI mirror; installs the dev group + runtime deps
+  + gitleaks, then invokes the gate script (single source of truth, INV-2).
+- `.github/workflows/build-smoke.yml` — the dedicated, opt-in build job
+  (`workflow_dispatch` + weekly), not run on every push.
+- `pyproject.toml` — metadata, pinned runtime deps + `dev`/`build` groups,
+  ruff / pytest / bandit config.
 
 ## Resumption flow — MANDATORY summarise-back
 

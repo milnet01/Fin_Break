@@ -17,6 +17,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# FIBR-0003: opt in the slow build + clean-room integration test. Off by default
+# so the everyday gate stays fast; `--build` (or FINBREAK_BUILD_SMOKE=1 in the
+# environment) turns it on, and the dedicated build-smoke CI job passes --build.
+# The test lives in tests/features/bundling/ and self-skips unless the flag is
+# set, so the normal `pytest` stage below runs it only when opted in.
+if [ "${1:-}" = "--build" ]; then
+    export FINBREAK_BUILD_SMOKE=1
+fi
+
 echo "== ruff check =="
 ruff check src tests
 
@@ -32,7 +41,11 @@ pip-audit
 echo "== gitleaks =="
 gitleaks dir . --no-banner --redact --config .gitleaks.toml
 
-echo "== pytest (excluding perf) =="
+if [ "${FINBREAK_BUILD_SMOKE:-}" = "1" ]; then
+    echo "== pytest (excluding perf; +build smoke-test) =="
+else
+    echo "== pytest (excluding perf) =="
+fi
 pytest -m "not perf"
 
 echo "All gates passed."
