@@ -46,7 +46,21 @@ def ignore_repo(tmp_path_factory):
 
 def _is_ignored(repo: Path, path: str) -> bool:
     """True if `path` is excluded by the copied `.gitignore` rules."""
-    result = subprocess.run(["git", "check-ignore", "--no-index", "-q", path], cwd=repo)
+    # core.excludesFile=/dev/null neutralizes the developer's global/system
+    # git ignore file so the result reflects ONLY the copied repo .gitignore
+    # (a global `*.py` rule would otherwise false-red INV-3).
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.excludesFile=/dev/null",
+            "check-ignore",
+            "--no-index",
+            "-q",
+            path,
+        ],
+        cwd=repo,
+    )
     if result.returncode not in (0, 1):
         raise RuntimeError(
             f"git check-ignore failed for {path!r} (exit {result.returncode})"
