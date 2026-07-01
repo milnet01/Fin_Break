@@ -278,6 +278,13 @@ lands on top.
 
 ---
 
+- 📋 [FIBR-0017] **P12: multi-language UI (i18n) — 5 bundled locales + language switcher.**
+  Qt translation pipeline: every user-facing string is wrapped in `tr()` from the first UI onward (P02), `lupdate` extracts them to `.ts` catalogs, translations are compiled to `.qm` and loaded via `QTranslator` at startup and on live switch. Ships **5 locales**: English (base), Spanish, Simplified Chinese, Hindi, French. A language picker in the Settings screen (FIBR-0014) switches locale. Numbers, currency, and dates render through `QLocale` (matters for a finance app — ties into the base-currency display), not hardcoded formats. Right-to-left scripts (Arabic, Urdu, Hebrew) are deliberately deferred: they need layout mirroring, a distinct effort, and are the natural "add more later" follow-up. NOTE: this stays cheap only if the string-externalization convention (`tr()` wrapping + `QLocale` formatting) is followed from P02 — retrofitting hardcoded English across the whole feature stack is far more expensive. Dependencies: FIBR-0014 (settings screen hosts the switcher; transitively pulls the feature-complete UI so all strings exist to translate).
+  **Layman:** Lets people use finbreak in their own language — ships in 5 languages to start, with more addable later.
+  Kind: implement.
+  Lanes: ui, i18n, services, tests.
+  Source: user-request-2026-07-01.
+
 ## P13 — Packaging & release
 
 ### 📦 Packaging
