@@ -314,6 +314,27 @@ lands on top.
   predate the thing it publishes. Dependencies: FIBR-0015. Lanes:
   build, ci, packaging. Kind: chore. Source: planned.
 
+- 📋 [FIBR-0037] **P13: a proper branded app icon (not a flat
+  glyph).** Design a polished, richly-shaded application icon —
+  the working concept is **money + an upward chart** (e.g. a
+  banknote or coins fronting a rising line/bar graph), on a
+  **transparent** background, reading clearly from a taskbar 16px
+  up to a store 1024px. Ship the full asset set every artifact
+  needs: master (≥1024px PNG/SVG source), multi-size `.ico`
+  (Windows), `.icns` (macOS), the freedesktop hicolor PNG set +
+  `.desktop` reference (Linux/AppImage), and the Flathub icon.
+  **Licensing is a hard gate, not a nicety:** because the app
+  ships on Flathub / GitHub Releases under MIT, every source
+  element must be **original or CC0/public-domain** — no scraped
+  copyrighted or attribution-encumbered art, even when combining
+  pieces (record provenance + license of each source in
+  `docs/` alongside the asset). Until this lands, the FIBR-0003
+  smoke-test AppImage and dev builds use a throwaway placeholder
+  icon. Dependencies: none (asset work); **blocks FIBR-0015**
+  (packaging embeds it) and should harmonise with the FIBR-0023
+  theme accent colour. Lanes: design, packaging. Kind: ux.
+  Source: user-request-2026-07-01.
+
 ---
 
 ## Enhancements & performance backlog
