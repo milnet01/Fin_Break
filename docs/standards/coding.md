@@ -63,6 +63,19 @@ runs 3.12+) and current PySide6 signal/slot style (see § 5.2). When unsure what
 current docs before writing. Stale idioms still run but they age the
 codebase.
 
+### 1.6 Surface refactoring opportunities by default
+
+Every implementation and review pass actively looks for refactoring
+opportunities — dead code, duplication ripe for a Rule-of-Three
+extraction (§ 1.3), an over-long function, a simpler shape (§ 1.1) — and
+**records** them. *Surfacing* is the default; *acting* is gated: an
+opportunity outside the current task becomes a tracked `refactor`-Kind
+ROADMAP item (or a `DS##` debt-sweep entry), **not** a drive-by edit in
+the current change — global rule § 11 keeps each edit surgical, and the
+Rule of Three (§ 1.3) still governs *when* an extraction is worth doing. Silence
+about known debt is the failure mode: an unrecorded "I'll remember it" is
+the same as not finding it.
+
 
 ## 2. Error handling
 
